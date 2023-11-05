@@ -37,46 +37,58 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/assignment/:id', async(req, res)=>{
+    app.get("/assignment/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const result = await assignmentsCollection.findOne(query);
       res.send(result);
-  })
+    });
 
-  app.put('/assignment/:id', async(req, res)=>{
-    const id = req.params.id;
-    const filter = {_id: new ObjectId(id)}
-    const options = { upsert: true};
-    const updatedAssignment = req.body;
-    const assignment = {
-        $set:{
+    app.put("/assignment/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedAssignment = req.body;
+      const assignment = {
+        $set: {
           assignment_name: updatedAssignment.assignment_name,
           due_date: updatedAssignment.due_date,
           assignment_image: updatedAssignment.assignment_image,
           marks: updatedAssignment.marks,
           level: updatedAssignment.level,
           description: updatedAssignment.description,
-        }
-      }
-      const result = await assignmentsCollection.updateOne(filter, assignment, options);
-      res.send(result)
-})
-
-    app.get("/assignments", async (req, res) => {
-      const page = parseInt(req.query.page)
-      const size = parseInt(req.query.size)
-      const result = await assignmentsCollection.find()
-      .skip(page*size)
-      .limit(size)
-      .toArray();
+        },
+      };
+      const result = await assignmentsCollection.updateOne(
+        filter,
+        assignment,
+        options
+      );
       res.send(result);
     });
 
-    app.get('/assignmentsCount', async(req, res)=>{
-      const count = await assignmentsCollection.estimatedDocumentCount()
-      res.send({count})
+    app.delete('/assignment/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await assignmentsCollection.deleteOne(query)
+      res.send(result)
     })
+
+    app.get("/assignments", async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const result = await assignmentsCollection
+        .find()
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/assignmentsCount", async (req, res) => {
+      const count = await assignmentsCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
