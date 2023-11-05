@@ -38,9 +38,19 @@ async function run() {
     });
 
     app.get("/assignments", async (req, res) => {
-      const result = await assignmentsCollection.find().toArray();
+      const page = parseInt(req.query.page)
+      const size = parseInt(req.query.size)
+      const result = await assignmentsCollection.find()
+      .skip(page*size)
+      .limit(size)
+      .toArray();
       res.send(result);
     });
+
+    app.get('/assignmentsCount', async(req, res)=>{
+      const count = await assignmentsCollection.estimatedDocumentCount()
+      res.send({count})
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
