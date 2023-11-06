@@ -28,6 +28,9 @@ async function run() {
     const assignmentsCollection = client
       .db("online_study_group_DB")
       .collection("assignments");
+    const submittedAssignmentCollection = client
+      .db("online_study_group_DB")
+      .collection("submittedAssignment");
 
     //assignment related api
     app.post("/assignments", async (req, res) => {
@@ -88,6 +91,19 @@ async function run() {
     app.get("/assignmentsCount", async (req, res) => {
       const count = await assignmentsCollection.estimatedDocumentCount();
       res.send({ count });
+    });
+
+    // submitted assignment related API
+    app.post("/submittedAssignments", async (req, res) => {
+      const submittedAssignment = req.body;
+      console.log(submittedAssignment);
+      const result = await submittedAssignmentCollection.insertOne(submittedAssignment);
+      res.send(result);
+    });
+
+    app.get("/submittedAssignments", async (req, res) => {
+      const result = await submittedAssignmentCollection.find().toArray();
+      res.send(result);
     });
 
     // Send a ping to confirm a successful connection
