@@ -105,6 +105,27 @@ async function run() {
       const result = await submittedAssignmentCollection.find().toArray();
       res.send(result);
     });
+    app.get("/submittedAssignments/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await submittedAssignmentCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.patch('/submittedAssignments/:id', async(req, res) =>{
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id)}
+      const updatedAssignment = req.body;
+      const updateDoc ={
+        $set:{
+          status: updatedAssignment.status,
+          obtained_marks: updatedAssignment.obtained_marks,
+          feedback: updatedAssignment.feedback
+        },
+      };
+      const result = await submittedAssignmentCollection.updateOne(filter, updateDoc)
+      res.send(result)
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
