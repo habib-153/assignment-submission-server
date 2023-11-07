@@ -3,11 +3,19 @@ const cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser')
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(cors({
+  origin:[
+    'http://localhost:5173',
+  ],
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser())
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.29d8nwh.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -20,6 +28,28 @@ const client = new MongoClient(uri, {
   },
 });
 
+// middlewares
+
+const logger = async(req, res, next) =>{
+  console.log('called', req.host, req.originalUrl)
+  next()
+}
+
+const verifyToken = async(req,res, next) =>{
+  const token = req.cookies.token
+  if(!token){
+    return res.status(401).send({message: 'not authorized'})
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded)=>{
+    if(error){
+      return res.status(401).send({message: 'not authorized'});
+    }
+    console.log('value in the token', decoded)
+    req.user = decoded
+    next()
+  })
+}
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -31,6 +61,26 @@ async function run() {
     const submittedAssignmentCollection = client
       .db("online_study_group_DB")
       .collection("submittedAssignment");
+
+    // auth api
+    app.post('/jwt', logger, async(req, res)=>{
+      const user = req.body;
+      console.log(user)
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '3h'})
+      res
+      .cookie('token', token,{
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none'
+      })
+      .send({success: true})
+    })
+
+    app.post('/logout', async(req, res)=>{
+      const user = req.body;
+      console.log('logged out', user)
+      res.clearCookie('token', {maxAge: 0}).send({success: true})
+    })
 
     //assignment related api
     app.post("/assignments", async (req, res) => {
@@ -77,7 +127,7 @@ async function run() {
       res.send(result)
     })
 
-    app.get("/assignments", async (req, res) => {
+    app.get("/assignments",logger, async (req, res) => {
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
       const result = await assignmentsCollection
@@ -101,10 +151,29 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/submittedAssignments", async (req, res) => {
-      const result = await submittedAssignmentCollection.find().toArray();
+    app.get("/submittedAssignments", logger, verifyToken, async (req, res) => {
+      console.log(req.query.email)
+      console.log('token', req.cookies.token)
+      console.log('user in the valid token', req.user)
+      
+      if(req.query.email !== req.user.email){
+        return res.status(403).send({message: 'Forbidden'})
+      }
+
+      let query = {};
+      if(req.query?.email){
+        query = {email: req.query.email}
+      }
+
+      const result = await submittedAssignmentCollection.find(query).toArray();
       res.send(result);
     });
+    
+    app.get("/allSubmission", async(req, res)=>{
+      const result = await submittedAssignmentCollection.find().toArray();
+      res.send(result);
+    })
+
     app.get("/submittedAssignments/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -128,7 +197,7 @@ async function run() {
     })
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    //await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
