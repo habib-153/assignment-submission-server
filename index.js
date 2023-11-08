@@ -10,6 +10,8 @@ const port = process.env.PORT || 5000;
 // middleware
 app.use(cors({
   origin:[
+    'https://a-11-online-group-study.web.app',
+   'https://a-11-online-group-study.firebaseapp.com',
     'http://localhost:5173',
   ],
   credentials: true
@@ -168,7 +170,7 @@ async function run() {
       const result = await submittedAssignmentCollection.find(query).toArray();
       res.send(result);
     });
-    
+
     app.get("/allSubmission", async(req, res)=>{
       const result = await submittedAssignmentCollection.find().toArray();
       res.send(result);
